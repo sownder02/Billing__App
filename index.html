@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Billing System</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f6f9;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        h2 {
+            text-align: center;
+        }
+
+        input {
+            padding: 8px;
+            margin: 5px;
+        }
+
+        button {
+            padding: 8px 12px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .add-btn { background: green; color: white; }
+        .save-btn { background: blue; color: white; }
+        .print-btn { background: orange; color: white; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: center;
+        }
+
+        .total-section {
+            text-align: right;
+            margin-top: 15px;
+            font-size: 18px;
+        }
+
+        @media print {
+            button, input {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Simple Billing System</h2>
+
+    <input type="text" id="customerName" placeholder="Customer Name">
+
+    <br>
+
+    <input type="text" id="itemName" placeholder="Item Name">
+    <input type="number" id="itemQty" placeholder="Quantity">
+    <input type="number" id="itemPrice" placeholder="Price">
+
+    <button class="add-btn" onclick="addItem()">Add Item</button>
+    <button class="save-btn" onclick="saveBill()">Save Bill</button>
+    <button class="print-btn" onclick="window.print()">Print</button>
+
+    <table id="billTable">
+        <thead>
+            <tr>
+                <th>Item</th>
+                <th>Qty</th>
+                <th>Price</th>
+                <th>Total</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <div class="total-section">
+        Subtotal: ₹<span id="subtotal">0</span><br>
+        Tax (5%): ₹<span id="tax">0</span><br>
+        <strong>Grand Total: ₹<span id="grandTotal">0</span></strong>
+    </div>
+</div>
+
+<script>
+let subtotal = 0;
+
+function addItem() {
+    const name = document.getElementById("itemName").value;
+    const qty = parseFloat(document.getElementById("itemQty").value);
+    const price = parseFloat(document.getElementById("itemPrice").value);
+
+    if (!name || !qty || !price) {
+        alert("Please fill all fields");
+        return;
+    }
+
+    const total = qty * price;
+    subtotal += total;
+
+    const table = document.getElementById("billTable").getElementsByTagName('tbody')[0];
+    const row = table.insertRow();
+
+    row.insertCell(0).innerHTML = name;
+    row.insertCell(1).innerHTML = qty;
+    row.insertCell(2).innerHTML = price.toFixed(2);
+    row.insertCell(3).innerHTML = total.toFixed(2);
+
+    updateTotals();
+
+    document.getElementById("itemName").value = "";
+    document.getElementById("itemQty").value = "";
+    document.getElementById("itemPrice").value = "";
+}
+
+function updateTotals() {
+    const tax = subtotal * 0.05;
+    const grandTotal = subtotal + tax;
+
+    document.getElementById("subtotal").innerText = subtotal.toFixed(2);
+    document.getElementById("tax").innerText = tax.toFixed(2);
+    document.getElementById("grandTotal").innerText = grandTotal.toFixed(2);
+}
+
+async function saveBill() {
+    const customerName = document.getElementById("customerName").value;
+
+    if (!customerName) {
+        alert("Enter customer name");
+        return;
+    }
+
+    const rows = document.querySelectorAll("#billTable tbody tr");
+    let items = [];
+
+    rows.forEach(row => {
+        items.push({
+            name: row.cells[0].innerText,
+            qty: row.cells[1].innerText,
+            price: row.cells[2].innerText,
+            total: row.cells[3].innerText
+        });
+    });
+
+    const tax = subtotal * 0.05;
+    const grandTotal = subtotal + tax;
+
+    const response = await fetch("/save-bill", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            customerName,
+            items,
+            subtotal,
+            tax,
+            grandTotal
+        })
+    });
+
+    const data = await response.json();
+    alert(data.message);
+}
+</script>
+
+</body>
+</html>
